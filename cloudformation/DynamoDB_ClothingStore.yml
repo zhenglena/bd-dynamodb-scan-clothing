@@ -1,0 +1,155 @@
+Resources:
+  LambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: "/"
+      Policies:
+        - PolicyName: dynamodbAccessRole
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+            - Effect: Allow
+              Action:
+              - dynamodb:*
+              Resource: "*"
+            - Effect: Allow
+              Action:
+              - logs:*
+              Resource: "*"
+  InitFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        ZipFile: >
+          const AWS = require("aws-sdk");
+          const response = require('./cfn-response');
+          const docClient = new AWS.DynamoDB.DocumentClient();
+          exports.handler = function(event, context) {
+              console.log(JSON.stringify(event,null,2));
+               var params = {
+                  RequestItems: {
+                   "ClothingStore": [
+                     {
+                      PutRequest: {
+                       Item: {
+                        id: "JE_3548",
+                        clothingType: "jeans",
+                        color: "maroon",
+                        price: 33.89,
+                        currentStatus: "for sale"
+                       }
+                      }
+                     },
+                     {
+                      PutRequest: {
+                       Item: {
+                        id: "JE_6523",
+                        clothingType: "jeans",
+                        color: "black",
+                        price: 20.45,
+                        currentStatus: "for sale"
+                       }
+                      }
+                     },
+                     {
+                      PutRequest: {
+                       Item: {
+                        id: "JE_8753",
+                        clothingType: "jeans",
+                        color: "light wash",
+                        price: 42.26,
+                        currentStatus: "sold"
+                       }
+                      }
+                     },
+                     {
+                      PutRequest: {
+                       Item: {
+                        id: "SH_1248",
+                        clothingType: "shoes",
+                        color: "white",
+                        price: 64.48,
+                        currentStatus: "sold"
+                       }
+                      }
+                     },
+                     {
+                      PutRequest: {
+                       Item: {
+                        id: "SH_2345",
+                        clothingType: "shoes",
+                        color: "brown",
+                        price: 35.64,
+                        currentStatus: "for sale"
+                       }
+                      }
+                     },
+                     {
+                      PutRequest: {
+                       Item: {
+                        id: "SH_4872",
+                        clothingType: "shoes",
+                        color: "brown",
+                        price: 60.21,
+                        currentStatus: "for sale"
+                       }
+                      }
+                     },
+                     {
+                      PutRequest: {
+                       Item: {
+                        id: "SH_7845",
+                        clothingType: "shoes",
+                        color: "black",
+                        price: 42.17,
+                        currentStatus: "for sale"
+                       }
+                      }
+                     }
+                    ]
+                  }
+                 };
+                 docClient.batchWrite(params, function(err, data) { if (err) {
+                    response.send(event, context, "FAILED", {});
+                  } else {
+                    response.send(event, context, "SUCCESS", {});
+                  }
+                });
+              };
+      Handler: index.handler
+      Role:
+        Fn::GetAtt: [ LambdaRole , "Arn" ]
+      Runtime: nodejs14.x
+      Timeout: 60
+  Unit5Lesson07DynamoDBClothingStore:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        -
+          AttributeName: "id"
+          AttributeType: "S"
+      KeySchema:
+        -
+          AttributeName: "id"
+          KeyType: "HASH"
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      BillingMode: PAY_PER_REQUEST
+      TableName: "ClothingStore"
+  InitializeClubMembers:
+    Type: Custom::InitFunction
+    DependsOn: Unit5Lesson07DynamoDBClothingStore
+    Properties:
+      ServiceToken:
+         Fn::GetAtt: [ InitFunction , "Arn" ]
+      DynamoTableName:
+        Ref: Unit5Lesson07DynamoDBClothingStore
